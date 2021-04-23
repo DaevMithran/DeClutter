@@ -1,48 +1,42 @@
+import os
 import time
 import shutil
-from watchdog.observers import Observer
+
+from pathlib import Path
 from watchdog.events import FileSystemEventHandler
+from extensions import extension_paths
 
- 
-class OnMyWatch:
+def rename_file(source: Path, dest_path: Path):
+    
+    if Path(dest_path / source.name).exists():
+        i = 0
 
-    # Directory to watch
-    FolderToTrack = "D:/TestFolder"
+        while True:
+            i+=1
+            new_name = dest_path / f'{source.stem}_{i}{source.suffix}'
 
-    # Create an Observer, which is going to monitor the directory
-    def __init__(self):
-        self.observer = Observer()
-
-    def run(self):
-        event_handler = myHandler()
-        
-        # Link handler and observer class using observer.schedule
-        self.observer.schedule(event_handler, path = self.FolderToTrack, recursive = True) #recursive = true makes observer to monitor sub directories 
-        self.observer.start()
-        try:
-            while True:
-                time.sleep(5)
-        except:
-            self.observer.stop()
-            print("Observer Stopped")
-
-        self.observer.join()   
+            if not new_name.exists():
+                return new_name
+    
+    else :
+        return dest_path/source.name  
     
 class myHandler(FileSystemEventHandler):
-  
-    def on_created(self, event):
-        print('File was created at %s'% event.src_path)
-        shutil.move(event.src_path, 'D:/Destination')
 
-    def on_deleted(self, event):
-        print('File was deleted at %s'% event.src_path)
+    def __init__(self, sourcePath, destPath):
+        self.sourcePath = Path(sourcePath).resolve()
+        self.destPath = Path(destPath).resolve()
 
-    # def on_modified(self, event):
-    #     print('File was modified at %s'% event.src_path)
+
+    def on_modified(self, event):
+        for newFile in self.sourcePath.iterdir():
+            if newFile.is_file():
+                destination = self.destPath / extension_paths[newFile.suffix.lower()]
+                destination = rename_file(source = newFile, dest_path = destination)
+                shutil.move(src = newFile, dst =destination)
+                print('File was modified at %s'% event.src_path)
               
   
-if __name__ == '__main__':
-    watch = OnMyWatch()
-    watch.run()
+
  
 
